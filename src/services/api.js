@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api';
+// Get the backend URL from environment variables, fallback to localhost for development
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -16,7 +17,7 @@ api.interceptors.request.use((config) => {
 
 export const searchStocks = async (query) => {
   const response = await api.get(`/stocks/search?symbol=${query}`);
-  return response.data.data.filter(stock => stock.country === 'United States');
+  return response.data.filter(stock => stock.country === 'United States');
 };
 
 export const getStockData = async (symbol, interval = '1h') => {

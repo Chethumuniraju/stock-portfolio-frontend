@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { login as loginApi } from '../services/api';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -25,24 +26,11 @@ const Login = () => {
         setError('');
         
         try {
-            const response = await fetch('http://localhost:8080/api/auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to login');
-            }
-
+            const data = await loginApi({ email, password });
             login(data.user, data.token);
             navigate('/dashboard');
         } catch (err) {
-            setError(err.message || 'Failed to login');
+            setError(err.response?.data?.message || 'Failed to login');
         }
     };
 
@@ -109,8 +97,9 @@ const Login = () => {
                             <Typography variant="body2" color="textSecondary">
                                 Don't have an account?{' '}
                                 <Link 
-                                    href="/register" 
+                                    component="button"
                                     variant="body2" 
+                                    onClick={() => navigate('/register')}
                                     sx={{ 
                                         cursor: 'pointer',
                                         textDecoration: 'none',
