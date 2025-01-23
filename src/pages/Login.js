@@ -6,7 +6,9 @@ import {
     Typography, 
     Paper,
     Container,
-    Alert
+    Alert,
+    Link,
+    Divider
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -96,6 +98,31 @@ const Login = () => {
                         >
                             Sign In
                         </Button>
+                        
+                        <Divider sx={{ my: 2 }}>
+                            <Typography color="textSecondary" variant="body2">
+                                OR
+                            </Typography>
+                        </Divider>
+                        
+                        <Box textAlign="center">
+                            <Typography variant="body2" color="textSecondary">
+                                Don't have an account?{' '}
+                                <Link 
+                                    href="/register" 
+                                    variant="body2" 
+                                    sx={{ 
+                                        cursor: 'pointer',
+                                        textDecoration: 'none',
+                                        '&:hover': {
+                                            textDecoration: 'underline'
+                                        }
+                                    }}
+                                >
+                                    Sign Up
+                                </Link>
+                            </Typography>
+                        </Box>
                     </Box>
                 </Paper>
             </Box>
