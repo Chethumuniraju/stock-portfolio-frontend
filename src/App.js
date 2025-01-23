@@ -11,6 +11,7 @@ import WatchlistPage from './pages/WatchlistPage';
 import WatchlistDetail from './pages/WatchlistDetail';
 import { AuthProvider } from './contexts/AuthContext';
 import Explore from './pages/Explore';
+import SharedPortfolio from './pages/SharedPortfolio';
 
 const theme = createTheme({
   palette: {
@@ -32,6 +33,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/explore" element={<Explore />} />
+            <Route path="/shared/:shareId" element={<SharedPortfolio />} />
             <Route path="/" element={
               <PrivateRoute>
                 <Home />

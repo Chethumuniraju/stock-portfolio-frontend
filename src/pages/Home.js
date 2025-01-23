@@ -1,11 +1,27 @@
-import React from 'react';
-import { Box, Container, Grid, Typography, Paper } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Container, Grid, Typography, Paper, Button, Snackbar } from '@mui/material';
 import Navbar from '../components/Navbar';
 import HoldingsList from '../components/HoldingsList';
 import { useAuth } from '../contexts/AuthContext';
+import ShareIcon from '@mui/icons-material/Share';
+import { createShareLink } from '../services/api';
 
 const Home = () => {
     const { user } = useAuth();
+    const [shareLink, setShareLink] = useState('');
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+
+    const handleShare = async () => {
+        try {
+            const response = await createShareLink();
+            const shareUrl = `${window.location.origin}/shared/${response.shareId}`;
+            setShareLink(shareUrl);
+            await navigator.clipboard.writeText(shareUrl);
+            setSnackbarOpen(true);
+        } catch (error) {
+            console.error('Error generating share link:', error);
+        }
+    };
 
     return (
         <Box>
@@ -41,6 +57,22 @@ const Home = () => {
                         </Paper>
                     </Grid>
                 </Grid>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                    <Button
+                        variant="contained"
+                        startIcon={<ShareIcon />}
+                        onClick={handleShare}
+                        sx={{ ml: 2 }}
+                    >
+                        Share Portfolio
+                    </Button>
+                </Box>
+                <Snackbar
+                    open={snackbarOpen}
+                    autoHideDuration={3000}
+                    onClose={() => setSnackbarOpen(false)}
+                    message="Share link copied to clipboard!"
+                />
             </Container>
         </Box>
     );
