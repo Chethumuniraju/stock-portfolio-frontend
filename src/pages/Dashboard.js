@@ -4,10 +4,10 @@ import {
     Box, Typography, TextField, Paper, Grid, Card, CardContent,
     Button, List, ListItem, ListItemText, ListItemSecondaryAction,
     IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Container,
-    ButtonGroup, Chip
+    ButtonGroup, Chip, Snackbar
 } from '@mui/material';
-import { Add, Delete, Search, ChevronRight, Add as AddIcon } from '@mui/icons-material';
-import api from '../services/api';
+import { Add, Delete, Search, ChevronRight, Add as AddIcon, Share as ShareIcon } from '@mui/icons-material';
+import api, { createShareLink } from '../services/api';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../contexts/AuthContext';
 import HoldingsList from '../components/HoldingsList';
@@ -27,6 +27,8 @@ const Dashboard = () => {
     const [activeSection, setActiveSection] = useState('holdings'); // 'holdings' or 'watchlists'
     const [selectedWatchlist, setSelectedWatchlist] = useState(null);
     const [watchlistStockDetails, setWatchlistStockDetails] = useState({});
+    const [shareLink, setShareLink] = useState('');
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
 
     useEffect(() => {
         fetchWatchlists();
@@ -211,6 +213,18 @@ const Dashboard = () => {
         navigate(`/stock/${symbol}`);
     };
 
+    const handleShare = async () => {
+        try {
+            const response = await createShareLink();
+            const shareUrl = `${window.location.origin}/shared/${response.shareId}`;
+            setShareLink(shareUrl);
+            await navigator.clipboard.writeText(shareUrl);
+            setSnackbarOpen(true);
+        } catch (error) {
+            console.error('Error generating share link:', error);
+        }
+    };
+
     return (
         <Box>
             <Navbar />
@@ -231,6 +245,7 @@ const Dashboard = () => {
                     <Box 
                         display="flex" 
                         alignItems="center" 
+                        justifyContent="space-between"
                         gap={2} 
                         sx={{ 
                             overflowX: 'auto',
@@ -248,69 +263,26 @@ const Dashboard = () => {
                             }
                         }}
                     >
-                        <Button
-                            className={!selectedWatchlist ? 'active' : ''}
-                            onClick={() => {
-                                setSelectedWatchlist(null);
-                            }}
-                        >
-                            Holdings
-                        </Button>
-                        {watchlists.map((watchlist) => (
-                            <Box
-                                key={watchlist.id}
-                                sx={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center',
-                                    position: 'relative',
-                                    '&:hover .delete-button': {
-                                        opacity: 1
-                                    }
-                                }}
+                        <Box display="flex" gap={2}>
+                            <Button
+                                className={activeSection === 'holdings' ? 'active' : ''}
+                                onClick={() => setActiveSection('holdings')}
                             >
-                                <Button
-                                    className={selectedWatchlist?.id === watchlist.id ? 'active' : ''}
-                                    onClick={() => setSelectedWatchlist(watchlist)}
-                                    endIcon={
-                                        <Chip 
-                                            label={watchlist.stockSymbols?.length || 0}
-                                            size="small"
-                                            sx={{ ml: 1 }}
-                                        />
-                                    }
-                                >
-                                    {watchlist.name}
-                                </Button>
-                                <IconButton
-                                    size="small"
-                                    className="delete-button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (window.confirm(`Are you sure you want to delete "${watchlist.name}" watchlist?`)) {
-                                            handleDeleteWatchlist(watchlist.id);
-                                        }
-                                    }}
-                                    sx={{ 
-                                        opacity: 0,
-                                        transition: 'opacity 0.2s',
-                                        position: 'absolute',
-                                        right: -30,
-                                        color: 'error.main',
-                                        '&:hover': {
-                                            bgcolor: 'error.lighter'
-                                        }
-                                    }}
-                                >
-                                    <Delete fontSize="small" />
-                                </IconButton>
-                            </Box>
-                        ))}
+                                Holdings
+                            </Button>
+                            <Button
+                                className={activeSection === 'watchlists' ? 'active' : ''}
+                                onClick={() => setActiveSection('watchlists')}
+                            >
+                                Watchlists
+                            </Button>
+                        </Box>
                         <Button
-                            startIcon={<Add />}
-                            onClick={() => setOpenDialog(true)}
-                            sx={{ ml: 'auto' }}
+                            variant="contained"
+                            startIcon={<ShareIcon />}
+                            onClick={handleShare}
                         >
-                            New Watchlist
+                            Share Portfolio
                         </Button>
                     </Box>
                 </Container>
@@ -523,6 +495,13 @@ const Dashboard = () => {
                     <Button onClick={() => setWatchlistDialogOpen(false)}>Cancel</Button>
                 </DialogActions>
             </Dialog>
+
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={3000}
+                onClose={() => setSnackbarOpen(false)}
+                message="Share link copied to clipboard!"
+            />
         </Box>
     );
 };
