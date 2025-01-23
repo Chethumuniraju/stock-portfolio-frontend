@@ -247,261 +247,205 @@ const Dashboard = () => {
                         alignItems="center" 
                         justifyContent="space-between"
                         gap={2} 
-                        sx={{ 
-                            overflowX: 'auto',
-                            py: 2,
-                            '& .MuiButton-root': {
-                                minWidth: 'fit-content',
-                                borderBottom: 3,
-                                borderColor: 'transparent',
-                                borderRadius: 0,
-                                px: 3,
-                                '&.active': {
-                                    borderColor: 'primary.main',
-                                    bgcolor: 'action.hover'
-                                }
-                            }
-                        }}
+                        sx={{ py: 2 }}
                     >
-                        <Box display="flex" gap={2}>
+                        <ButtonGroup variant="contained">
                             <Button
-                                className={activeSection === 'holdings' ? 'active' : ''}
                                 onClick={() => setActiveSection('holdings')}
+                                variant={activeSection === 'holdings' ? 'contained' : 'outlined'}
                             >
                                 Holdings
                             </Button>
                             <Button
-                                className={activeSection === 'watchlists' ? 'active' : ''}
                                 onClick={() => setActiveSection('watchlists')}
+                                variant={activeSection === 'watchlists' ? 'contained' : 'outlined'}
                             >
                                 Watchlists
                             </Button>
+                        </ButtonGroup>
+                        <Box>
+                            <Button
+                                variant="contained"
+                                startIcon={<ShareIcon />}
+                                onClick={handleShare}
+                                sx={{ mr: 2 }}
+                            >
+                                Share Portfolio
+                            </Button>
+                            {activeSection === 'watchlists' && (
+                                <Button
+                                    variant="contained"
+                                    startIcon={<AddIcon />}
+                                    onClick={() => setOpenDialog(true)}
+                                >
+                                    Create Watchlist
+                                </Button>
+                            )}
                         </Box>
-                        <Button
-                            variant="contained"
-                            startIcon={<ShareIcon />}
-                            onClick={handleShare}
-                        >
-                            Share Portfolio
-                        </Button>
                     </Box>
                 </Container>
             </Box>
 
             <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-                <Grid container spacing={3}>
-                    {/* Search Section - Always visible */}
-                    <Grid item xs={12}>
-                        <Paper sx={{ p: 3, mb: 2 }}>
-                            <Typography variant="h6" gutterBottom>
-                                Search Stocks
-                            </Typography>
-                            <TextField
-                                fullWidth
-                                variant="outlined"
-                                placeholder="Search by stock symbol..."
-                                value={searchQuery}
-                                onChange={handleSearchChange}
-                                sx={{ mb: 2 }}
-                            />
-                            {searchResults.length > 0 && (
-                                <List>
-                                    {searchResults.map((stock) => (
-                                        <ListItem
-                                            key={stock.symbol}
-                                            button
-                                            onClick={() => handleStockClick(stock.symbol)}
-                                            sx={{
-                                                '&:hover': { bgcolor: 'action.hover' },
-                                                borderRadius: 1,
-                                                mb: 1
-                                            }}
-                                        >
-                                            <ListItemText
-                                                primary={
-                                                    <Box display="flex" alignItems="center">
-                                                        <Typography variant="body1" fontWeight="medium">
-                                                            {stock.symbol}
-                                                        </Typography>
-                                                        <Typography 
-                                                            variant="body2" 
-                                                            color="textSecondary"
-                                                            sx={{ ml: 2 }}
-                                                        >
-                                                            {stock.name || stock.instrument_name}
-                                                        </Typography>
-                                                    </Box>
-                                                }
-                                                secondary={`Exchange: ${stock.exchange}`}
-                                            />
-                                            {selectedWatchlist ? (
-                                                <Button
-                                                    variant="contained"
-                                                    size="small"
-                                                    startIcon={<Add />}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleAddToWatchlist(selectedWatchlist.id, stock.symbol);
-                                                        setSearchQuery('');
-                                                        setSearchResults([]);
-                                                    }}
-                                                    sx={{ mr: 1 }}
-                                                >
-                                                    Add to {selectedWatchlist.name}
-                                                </Button>
-                                            ) : (
-                                                <IconButton
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setSelectedStock(stock);
-                                                        setWatchlistDialogOpen(true);
-                                                    }}
-                                                >
-                                                    <Add />
-                                                </IconButton>
-                                            )}
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            )}
-                        </Paper>
-                    </Grid>
-
-                    {/* Content Section */}
-                    <Grid item xs={12}>
-                        <Paper sx={{ p: 3 }}>
-                            {!selectedWatchlist ? (
-                                <>
-                                    <Typography variant="h6" gutterBottom>
-                                        Your Portfolio
-                                    </Typography>
-                                    <HoldingsList />
-                                </>
-                            ) : (
-                                <>
-                                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                                        <Typography variant="h6">{selectedWatchlist.name}</Typography>
-                                        <Button
-                                            variant="contained"
-                                            startIcon={<Add />}
-                                            size="small"
-                                            onClick={() => {
-                                                setSearchQuery('');
-                                                setSearchResults([]);
-                                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                                            }}
-                                        >
-                                            Add Stock
-                                        </Button>
-                                    </Box>
-                                    <List>
-                                        {selectedWatchlist.stockSymbols.map((symbol) => {
-                                            const stockDetail = watchlistStockDetails[symbol] || {};
-                                            const currentPrice = parseFloat(stockDetail.close) || 0;
-                                            const percentChange = parseFloat(stockDetail.percent_change) || 0;
-
-                                            return (
-                                                <ListItem
+                {activeSection === 'holdings' ? (
+                    <HoldingsList />
+                ) : (
+                    <Grid container spacing={3}>
+                        {watchlists.map((watchlist) => (
+                            <Grid item xs={12} sm={6} md={4} key={watchlist.id}>
+                                <Card>
+                                    <CardContent>
+                                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                                            <Typography variant="h6" gutterBottom>
+                                                {watchlist.name}
+                                            </Typography>
+                                            <IconButton 
+                                                onClick={() => handleDeleteWatchlist(watchlist.id)}
+                                                size="small"
+                                            >
+                                                <Delete />
+                                            </IconButton>
+                                        </Box>
+                                        <List>
+                                            {watchlist.stockSymbols.map((symbol) => (
+                                                <ListItem 
                                                     key={symbol}
                                                     button
-                                                    onClick={() => navigate(`/stock/${symbol}`)}
-                                                    sx={{
-                                                        '&:hover': { bgcolor: 'action.hover' },
-                                                        borderRadius: 1,
-                                                        mb: 1
-                                                    }}
+                                                    onClick={() => handleStockClick(symbol)}
                                                 >
-                                                    <ListItemText
-                                                        primary={
-                                                            <Box display="flex" alignItems="center">
-                                                                <Typography variant="body1" fontWeight="medium">
-                                                                    {symbol}
-                                                                </Typography>
-                                                                <Typography 
-                                                                    variant="body2" 
-                                                                    color="textSecondary"
-                                                                    sx={{ ml: 2 }}
-                                                                >
-                                                                    {formatCurrency(currentPrice)}
-                                                                </Typography>
-                                                                <Typography 
-                                                                    variant="body2"
-                                                                    color={percentChange >= 0 ? "success.main" : "error.main"}
-                                                                    sx={{ ml: 2 }}
-                                                                >
-                                                                    {formatPercentage(percentChange)}
-                                                                </Typography>
-                                                            </Box>
+                                                    <ListItemText 
+                                                        primary={symbol}
+                                                        secondary={
+                                                            watchlistStockDetails[symbol] ? (
+                                                                <>
+                                                                    {formatCurrency(watchlistStockDetails[symbol].close)}
+                                                                    <span style={{ 
+                                                                        color: watchlistStockDetails[symbol].percent_change >= 0 
+                                                                            ? 'green' 
+                                                                            : 'red',
+                                                                        marginLeft: '8px'
+                                                                    }}>
+                                                                        {formatPercentage(watchlistStockDetails[symbol].percent_change)}
+                                                                    </span>
+                                                                </>
+                                                            ) : 'Loading...'
                                                         }
                                                     />
-                                                    <IconButton
-                                                        edge="end"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleRemoveFromWatchlist(selectedWatchlist.id, symbol);
-                                                        }}
-                                                    >
-                                                        <Delete />
-                                                    </IconButton>
+                                                    <ListItemSecondaryAction>
+                                                        <IconButton 
+                                                            edge="end" 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleRemoveFromWatchlist(watchlist.id, symbol);
+                                                            }}
+                                                        >
+                                                            <Delete />
+                                                        </IconButton>
+                                                    </ListItemSecondaryAction>
                                                 </ListItem>
-                                            );
-                                        })}
-                                    </List>
-                                </>
-                            )}
-                        </Paper>
-                    </Grid>
-                </Grid>
-            </Container>
-
-            {/* Dialogs */}
-            <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-                <DialogTitle>Create New Watchlist</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="Watchlist Name"
-                        fullWidth
-                        value={newWatchlistName}
-                        onChange={(e) => setNewWatchlistName(e.target.value)}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-                    <Button onClick={handleCreateWatchlist}>Create</Button>
-                </DialogActions>
-            </Dialog>
-
-            <Dialog open={watchlistDialogOpen} onClose={() => setWatchlistDialogOpen(false)}>
-                <DialogTitle>Add to Watchlist</DialogTitle>
-                <DialogContent>
-                    <List>
-                        {watchlists.map((watchlist) => (
-                            <ListItem
-                                key={watchlist.id}
-                                button
-                                onClick={() => {
-                                    handleAddToWatchlist(watchlist.id, selectedStock?.symbol);
-                                    setWatchlistDialogOpen(false);
-                                }}
-                            >
-                                <ListItemText primary={watchlist.name} />
-                            </ListItem>
+                                            ))}
+                                        </List>
+                                        <Box mt={2}>
+                                            <Button
+                                                fullWidth
+                                                variant="outlined"
+                                                startIcon={<Add />}
+                                                onClick={() => {
+                                                    setSelectedWatchlist(watchlist);
+                                                    setWatchlistDialogOpen(true);
+                                                }}
+                                            >
+                                                Add Stock
+                                            </Button>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
                         ))}
-                    </List>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setWatchlistDialogOpen(false)}>Cancel</Button>
-                </DialogActions>
-            </Dialog>
+                    </Grid>
+                )}
 
-            <Snackbar
-                open={snackbarOpen}
-                autoHideDuration={3000}
-                onClose={() => setSnackbarOpen(false)}
-                message="Share link copied to clipboard!"
-            />
+                {/* Create Watchlist Dialog */}
+                <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+                    <DialogTitle>Create New Watchlist</DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            autoFocus
+                            margin="dense"
+                            label="Watchlist Name"
+                            fullWidth
+                            value={newWatchlistName}
+                            onChange={(e) => setNewWatchlistName(e.target.value)}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+                        <Button 
+                            onClick={handleCreateWatchlist}
+                            variant="contained"
+                            disabled={!newWatchlistName.trim()}
+                        >
+                            Create
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Add Stock to Watchlist Dialog */}
+                <Dialog 
+                    open={watchlistDialogOpen} 
+                    onClose={() => {
+                        setWatchlistDialogOpen(false);
+                        setSearchQuery('');
+                        setSearchResults([]);
+                    }}
+                >
+                    <DialogTitle>Add Stock to Watchlist</DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            autoFocus
+                            margin="dense"
+                            label="Search Stocks"
+                            fullWidth
+                            value={searchQuery}
+                            onChange={handleSearchChange}
+                        />
+                        <List>
+                            {searchResults.map((stock) => (
+                                <ListItem 
+                                    key={stock.symbol}
+                                    button
+                                    onClick={() => {
+                                        handleAddToWatchlist(selectedWatchlist.id, stock.symbol);
+                                        setWatchlistDialogOpen(false);
+                                    }}
+                                >
+                                    <ListItemText 
+                                        primary={stock.symbol}
+                                        secondary={stock.name}
+                                    />
+                                </ListItem>
+                            ))}
+                        </List>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => {
+                            setWatchlistDialogOpen(false);
+                            setSearchQuery('');
+                            setSearchResults([]);
+                        }}>
+                            Cancel
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Share Link Snackbar */}
+                <Snackbar
+                    open={snackbarOpen}
+                    autoHideDuration={3000}
+                    onClose={() => setSnackbarOpen(false)}
+                    message="Share link copied to clipboard!"
+                />
+            </Container>
         </Box>
     );
 };
