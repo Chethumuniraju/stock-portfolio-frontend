@@ -156,6 +156,11 @@ const StockDetails = () => {
         setError(''); // Clear any previous errors
     };
 
+    const formatNumber = (value) => {
+        const num = parseFloat(value);
+        return isNaN(num) ? '0.00' : num.toFixed(2);
+    };
+
     const renderFundamentals = () => {
         if (!fundamentals) return null;
 
@@ -380,7 +385,7 @@ const StockDetails = () => {
                                     <>
                                         <Grid item>
                                             <Typography variant="h5">
-                                                ${quote.close?.toFixed(2)}
+                                                ${formatNumber(quote.close)}
                                             </Typography>
                                         </Grid>
                                         <Grid item>
@@ -389,7 +394,7 @@ const StockDetails = () => {
                                                 color={quote.percent_change >= 0 ? 'success.main' : 'error.main'}
                                             >
                                                 {quote.percent_change >= 0 ? '+' : ''}
-                                                {quote.percent_change?.toFixed(2)}%
+                                                {formatNumber(quote.percent_change)}%
                                             </Typography>
                                         </Grid>
                                     </>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
     Card, CardContent, Typography, Box, Grid,
     Table, TableBody, TableCell, TableContainer, 
@@ -20,30 +20,87 @@ const HoldingsList = () => {
         totalProfitLoss: 0,
         todayProfitLoss: 0
     });
+    
+    // Use refs to track the latest request
+    const currentRequestId = useRef(0);
+    const isMounted = useRef(true);
+
+    useEffect(() => {
+        return () => {
+            isMounted.current = false;
+        };
+    }, []);
 
     const fetchHoldings = async () => {
+        const requestId = ++currentRequestId.current;
+        
         try {
-            const response = await api.get('/holdings');
-            setHoldings(response.data);
+            setLoading(true);
             
-            // Fetch quotes for all holdings
-            const quotes = {};
-            for (const holding of response.data) {
-                const quoteResponse = await api.get(`/stocks/${holding.stockSymbol}/quote`);
-                quotes[holding.stockSymbol] = quoteResponse.data;
+            // Fetch holdings first
+            const holdingsResponse = await api.get('/holdings');
+            
+            // Check if this is still the latest request
+            if (!isMounted.current || requestId !== currentRequestId.current) {
+                return;
             }
+            
+            const holdingsData = holdingsResponse.data;
+            setHoldings(holdingsData);
+            
+            // Fetch all quotes in parallel
+            const quotePromises = holdingsData.map(holding => 
+                api.get(`/stocks/${holding.stockSymbol}/quote`)
+                    .then(response => ({ 
+                        symbol: holding.stockSymbol, 
+                        data: response.data 
+                    }))
+                    .catch(error => {
+                        console.error(`Error fetching quote for ${holding.stockSymbol}:`, error);
+                        return { 
+                            symbol: holding.stockSymbol, 
+                            data: null 
+                        };
+                    })
+            );
+            
+            const quoteResults = await Promise.all(quotePromises);
+            
+            // Check again if this is still the latest request
+            if (!isMounted.current || requestId !== currentRequestId.current) {
+                return;
+            }
+            
+            // Convert array of results to object
+            const quotes = quoteResults.reduce((acc, { symbol, data }) => {
+                if (data) {
+                    acc[symbol] = data;
+                }
+                return acc;
+            }, {});
+            
             setStockDetails(quotes);
         } catch (error) {
             console.error('Error fetching holdings:', error);
+            if (isMounted.current && requestId === currentRequestId.current) {
+                setHoldings([]);
+                setStockDetails({});
+            }
         } finally {
-            setLoading(false);
+            if (isMounted.current && requestId === currentRequestId.current) {
+                setLoading(false);
+            }
         }
     };
 
     useEffect(() => {
         fetchHoldings();
         const interval = setInterval(fetchHoldings, 30000); // Refresh every 30 seconds
-        return () => clearInterval(interval);
+        
+        return () => {
+            clearInterval(interval);
+            currentRequestId.current++; // Cancel any ongoing requests
+        };
     }, []);
 
     useEffect(() => {
@@ -84,7 +141,7 @@ const HoldingsList = () => {
         return isNaN(num) ? '0.00%' : `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;
     };
 
-    if (loading) {
+    if (loading && !holdings.length) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
                 <CircularProgress />
