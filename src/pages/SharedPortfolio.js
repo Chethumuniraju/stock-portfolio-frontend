@@ -13,11 +13,12 @@ import {
     TableHead,
     TableRow,
     CircularProgress,
-    Alert
+    Alert,
+    AppBar,
+    Toolbar
 } from '@mui/material';
 import { TrendingUp, TrendingDown } from '@mui/icons-material';
 import { getSharedPortfolio } from '../services/api';
-import Navbar from '../components/Navbar';
 
 const SharedPortfolio = () => {
     const { shareId } = useParams();
@@ -69,7 +70,11 @@ const SharedPortfolio = () => {
     if (loading) {
         return (
             <Box>
-                <Navbar />
+                <AppBar position="static">
+                    <Toolbar>
+                        <Typography variant="h6">Shared Portfolio View</Typography>
+                    </Toolbar>
+                </AppBar>
                 <Container maxWidth="lg" sx={{ mt: 4 }}>
                     <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
                         <CircularProgress />
@@ -82,7 +87,11 @@ const SharedPortfolio = () => {
     if (error) {
         return (
             <Box>
-                <Navbar />
+                <AppBar position="static">
+                    <Toolbar>
+                        <Typography variant="h6">Shared Portfolio View</Typography>
+                    </Toolbar>
+                </AppBar>
                 <Container maxWidth="lg" sx={{ mt: 4 }}>
                     <Alert severity="error">{error}</Alert>
                 </Container>
@@ -93,7 +102,11 @@ const SharedPortfolio = () => {
     if (!portfolioData) {
         return (
             <Box>
-                <Navbar />
+                <AppBar position="static">
+                    <Toolbar>
+                        <Typography variant="h6">Shared Portfolio View</Typography>
+                    </Toolbar>
+                </AppBar>
                 <Container maxWidth="lg" sx={{ mt: 4 }}>
                     <Alert severity="info">Portfolio not found or link has expired.</Alert>
                 </Container>
@@ -119,7 +132,11 @@ const SharedPortfolio = () => {
 
     return (
         <Box>
-            <Navbar />
+            <AppBar position="static">
+                <Toolbar>
+                    <Typography variant="h6">Shared Portfolio View</Typography>
+                </Toolbar>
+            </AppBar>
             <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
                 <Paper sx={{ p: 3, mb: 3 }}>
                     <Typography variant="h4" gutterBottom>
