@@ -14,11 +14,17 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 COPY --from=builder /app/build /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy nginx config template
+COPY nginx.conf /etc/nginx/templates/default.conf.template
+
+# Add environment variable for nginx template
+ENV BACKEND_URL=http://localhost:8080
+
+EXPOSE 80
 
 # Add healthcheck
 HEALTHCHECK --interval=30s --timeout=3s \
   CMD wget -q --spider http://localhost:80 || exit 1
 
-EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
