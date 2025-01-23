@@ -8,6 +8,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, ArrowBack } from '@mui/icons-material';
 import Navbar from '../components/Navbar';
+import api from '../services/api';
 
 const WatchlistDetail = () => {
     const { id } = useParams();
@@ -36,7 +37,7 @@ const WatchlistDetail = () => {
                 return;
             }
             
-            await fetchWatchlist();
+            await fetchWatchlistDetails();
         };
         
         checkAuthAndFetch();
@@ -52,9 +53,8 @@ const WatchlistDetail = () => {
         try {
             const details = {};
             for (const symbol of watchlist.stockSymbols) {
-                const response = await fetch(`http://localhost:8080/api/stocks/${symbol}/quote`);
-                if (response.ok) {
-                    const data = await response.json();
+                const data = await fetchStockQuote(symbol);
+                if (data) {
                     details[symbol] = data;
                 }
             }
@@ -64,45 +64,50 @@ const WatchlistDetail = () => {
         }
     };
 
-    const fetchWatchlist = async () => {
+    const fetchStockQuote = async (symbol) => {
         try {
-            if (!token) {
-                throw new Error('No authentication token available');
-            }
-            
-            console.log('Fetching watchlist:', id);
-            const response = await fetch(`http://localhost:8080/api/watchlists/${id}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            console.log('Response status:', response.status);
-            
-            if (response.status === 403) {
-                const errorText = await response.text();
-                console.error('Authentication failed:', errorText);
-                setError('Authentication failed. Please login again.');
-                navigate('/login');
-                return;
-            }
-            
-            if (!response.ok) {
-                const errorData = await response.text();
-                console.error('Error response:', errorData);
-                setError(errorData || 'Failed to fetch watchlist');
-                return;
-            }
-            
-            const data = await response.json();
-            console.log('Watchlist data:', data);
-            setWatchlist(data);
-            setError(null);
+            const response = await api.get(`/stocks/${symbol}/quote`);
+            return response.data;
         } catch (error) {
-            console.error('Error fetching watchlist:', error);
-            setError(error.message || 'An error occurred while fetching the watchlist');
-            setWatchlist(null);
+            console.error(`Error fetching quote for ${symbol}:`, error);
+            return null;
+        }
+    };
+
+    const fetchWatchlistDetails = async () => {
+        try {
+            const response = await api.get(`/watchlists/${id}`);
+            setWatchlist(response.data);
+        } catch (error) {
+            console.error('Error fetching watchlist details:', error);
+        }
+    };
+
+    const searchStocks = async (query) => {
+        try {
+            const response = await api.get(`/stocks/search?symbol=${query}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error searching stocks:', error);
+            return [];
+        }
+    };
+
+    const addStockToWatchlist = async (symbol) => {
+        try {
+            await api.post(`/watchlists/${id}/stocks/${symbol}`);
+            await fetchWatchlistDetails();
+        } catch (error) {
+            console.error('Error adding stock to watchlist:', error);
+        }
+    };
+
+    const removeStockFromWatchlist = async (symbol) => {
+        try {
+            await api.delete(`/watchlists/${id}/stocks/${symbol}`);
+            await fetchWatchlistDetails();
+        } catch (error) {
+            console.error('Error removing stock from watchlist:', error);
         }
     };
 
@@ -114,17 +119,14 @@ const WatchlistDetail = () => {
 
         setIsSearching(true);
         try {
-            const response = await fetch(`http://localhost:8080/api/stocks/search?symbol=${query}`);
-            if (response.ok) {
-                const data = await response.json();
-                // Filter for US stocks only
-                const usStocks = (data.data || []).filter(stock => 
-                    stock.country === 'United States' || 
-                    stock.exchange?.includes('NYSE') || 
-                    stock.exchange?.includes('NASDAQ')
-                );
-                setSearchResults(usStocks);
-            }
+            const data = await searchStocks(query);
+            // Filter for US stocks only
+            const usStocks = (data.data || []).filter(stock => 
+                stock.country === 'United States' || 
+                stock.exchange?.includes('NYSE') || 
+                stock.exchange?.includes('NASDAQ')
+            );
+            setSearchResults(usStocks);
         } catch (error) {
             console.error('Error searching stocks:', error);
             setSearchResults([]);
@@ -143,40 +145,6 @@ const WatchlistDetail = () => {
 
         return () => clearTimeout(timeoutId);
     }, [searchQuery]);
-
-    const handleAddStock = async (symbol) => {
-        try {
-            const response = await fetch(`http://localhost:8080/api/watchlists/${id}/stocks/${symbol}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            if (response.ok) {
-                fetchWatchlist();
-                setOpenAddDialog(false);
-                setSearchQuery('');
-            }
-        } catch (error) {
-            console.error('Error adding stock:', error);
-        }
-    };
-
-    const handleRemoveStock = async (symbol) => {
-        try {
-            const response = await fetch(`http://localhost:8080/api/watchlists/${id}/stocks/${symbol}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            if (response.ok) {
-                fetchWatchlist();
-            }
-        } catch (error) {
-            console.error('Error removing stock:', error);
-        }
-    };
 
     if (!token || !user) {
         return null; // Will redirect in useEffect
@@ -251,7 +219,7 @@ const WatchlistDetail = () => {
                                         edge="end"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleRemoveStock(symbol);
+                                            removeStockFromWatchlist(symbol);
                                         }}
                                     >
                                         <DeleteIcon />
@@ -285,7 +253,7 @@ const WatchlistDetail = () => {
                                     <ListItem
                                         key={stock.symbol}
                                         button
-                                        onClick={() => handleAddStock(stock.symbol)}
+                                        onClick={() => addStockToWatchlist(stock.symbol)}
                                     >
                                         <ListItemText 
                                             primary={`${stock.symbol} - ${stock.exchange}`}

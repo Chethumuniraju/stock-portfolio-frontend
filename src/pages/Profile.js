@@ -9,6 +9,7 @@ import {
 import { AccountBalance, History, Add, TrendingUp, TrendingDown } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
+import api from '../services/api';
 
 const Profile = () => {
     const { user, login: updateAuth } = useAuth();
@@ -24,15 +25,10 @@ const Profile = () => {
 
     const fetchTransactions = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/transactions', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            const data = await response.json();
-            setTransactions(data);
+            const response = await api.get('/transactions');
+            setTransactions(response.data);
         } catch (error) {
-            console.error('Failed to fetch transactions:', error);
+            console.error('Error fetching transactions:', error);
         }
     };
 
@@ -51,29 +47,14 @@ const Profile = () => {
                 throw new Error('No authentication token found');
             }
 
-            const response = await fetch('http://localhost:8080/api/users/topup', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ amount: parseFloat(topupAmount) })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.text();
-                throw new Error(errorData || 'Failed to top up');
-            }
-
-            const data = await response.json();
-            console.log('Top-up response:', data);
-            updateAuth({ ...user, balance: data.balance }, token);
+            const response = await api.post('/users/topup', { amount: parseFloat(topupAmount) });
+            updateAuth({ ...user, balance: response.data.balance }, token);
             setSuccess(`Successfully added $${topupAmount}`);
             setOpenTopup(false);
             setTopupAmount('');
         } catch (error) {
             console.error('Top-up error:', error);
-            setError(error.message || 'Failed to top up');
+            setError(error.response?.data?.message || 'Failed to top up');
         }
     };
 

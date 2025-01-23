@@ -7,6 +7,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import api from '../services/api';
 
 const HoldingsList = () => {
     const navigate = useNavigate();
@@ -22,44 +23,20 @@ const HoldingsList = () => {
 
     const fetchHoldings = async () => {
         try {
-            setLoading(true);
-            const response = await fetch('http://localhost:8080/api/holdings', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to fetch holdings');
-            }
-            
-            const data = await response.json();
-            const filteredHoldings = data.filter(h => h.quantity > 0);
-            setHoldings(filteredHoldings);
-            
-            // Fetch current prices for all holdings
-            await Promise.all(filteredHoldings.map(holding => fetchStockDetails(holding.stockSymbol)));
-            
+            const response = await api.get('/holdings');
+            setHoldings(response.data);
         } catch (error) {
             console.error('Error fetching holdings:', error);
-            setHoldings([]);
-        } finally {
-            setLoading(false);
         }
     };
 
-    const fetchStockDetails = async (symbol) => {
+    const fetchQuote = async (symbol) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/stocks/${symbol}/quote`);
-            if (response.ok) {
-                const data = await response.json();
-                setStockDetails(prev => ({
-                    ...prev,
-                    [symbol]: data
-                }));
-            }
+            const response = await api.get(`/stocks/${symbol}/quote`);
+            return response.data;
         } catch (error) {
-            console.error(`Error fetching stock details for ${symbol}:`, error);
+            console.error(`Error fetching quote for ${symbol}:`, error);
+            return null;
         }
     };
 

@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import Navbar from '../components/Navbar';
+import api from '../services/api';
 
 const WatchlistPage = () => {
     const navigate = useNavigate();
@@ -24,20 +25,52 @@ const WatchlistPage = () => {
 
     const fetchWatchlists = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/watchlists', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setWatchlists(data);
-                if (data.length > 0 && !selectedWatchlist) {
-                    setSelectedWatchlist(data[0]);
-                }
+            const response = await api.get('/watchlists');
+            setWatchlists(response.data);
+            if (response.data.length > 0 && !selectedWatchlist) {
+                setSelectedWatchlist(response.data[0]);
             }
         } catch (error) {
             console.error('Error fetching watchlists:', error);
+        }
+    };
+
+    const createWatchlist = async (name) => {
+        try {
+            const response = await api.post('/watchlists', { name });
+            setWatchlists([...watchlists, response.data]);
+        } catch (error) {
+            console.error('Error creating watchlist:', error);
+        }
+    };
+
+    const searchStocks = async (query) => {
+        try {
+            const response = await api.get(`/stocks/search?symbol=${query}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error searching stocks:', error);
+            return [];
+        }
+    };
+
+    const addStockToWatchlist = async (symbol) => {
+        try {
+            await api.post(`/watchlists/${selectedWatchlist.id}/stocks/${symbol}`);
+            // Refresh watchlists after adding stock
+            fetchWatchlists();
+        } catch (error) {
+            console.error('Error adding stock to watchlist:', error);
+        }
+    };
+
+    const removeStockFromWatchlist = async (symbol) => {
+        try {
+            await api.delete(`/watchlists/${selectedWatchlist.id}/stocks/${symbol}`);
+            // Refresh watchlists after removing stock
+            fetchWatchlists();
+        } catch (error) {
+            console.error('Error removing stock from watchlist:', error);
         }
     };
 
@@ -47,27 +80,9 @@ const WatchlistPage = () => {
                 return; // Don't create empty watchlist
             }
 
-            const response = await fetch('http://localhost:8080/api/watchlists', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    name: newWatchlistName,
-                    stockSymbols: [] // Add this to match backend expectation
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Created watchlist:', data);
-                await fetchWatchlists();
-                setOpenCreateDialog(false);
-                setNewWatchlistName('');
-            } else {
-                console.error('Failed to create watchlist:', response.status);
-            }
+            await createWatchlist(newWatchlistName);
+            setOpenCreateDialog(false);
+            setNewWatchlistName('');
         } catch (error) {
             console.error('Error creating watchlist:', error);
         }
@@ -75,15 +90,8 @@ const WatchlistPage = () => {
 
     const handleSearchStocks = async () => {
         try {
-            const response = await fetch(`http://localhost:8080/api/stocks/search?symbol=${searchQuery}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setSearchResults(data.data || []);
-            }
+            const results = await searchStocks(searchQuery);
+            setSearchResults(results);
         } catch (error) {
             console.error('Error searching stocks:', error);
         }
@@ -91,17 +99,9 @@ const WatchlistPage = () => {
 
     const handleAddStock = async (symbol) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/watchlists/${selectedWatchlist.id}/stocks/${symbol}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            if (response.ok) {
-                await fetchWatchlists();
-                setOpenAddStockDialog(false);
-                setSearchQuery('');
-            }
+            await addStockToWatchlist(symbol);
+            setOpenAddStockDialog(false);
+            setSearchQuery('');
         } catch (error) {
             console.error('Error adding stock:', error);
         }
@@ -109,15 +109,7 @@ const WatchlistPage = () => {
 
     const handleRemoveStock = async (symbol) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/watchlists/${selectedWatchlist.id}/stocks/${symbol}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            if (response.ok) {
-                await fetchWatchlists();
-            }
+            await removeStockFromWatchlist(symbol);
         } catch (error) {
             console.error('Error removing stock:', error);
         }

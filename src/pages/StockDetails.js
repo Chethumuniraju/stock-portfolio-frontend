@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 
 const INTERVALS = ['1min', '5min', '15min', '30min', '1h', '1day', '1week'];
 
@@ -59,82 +60,37 @@ const StockDetails = () => {
 
     const fetchStockData = async () => {
         try {
-            const response = await fetch(
-                `http://localhost:8080/api/stocks/${symbol}/data?interval=${selectedInterval}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                }
-            );
-            const data = await response.json();
-            console.log('Stock data:', data);
-            
-            // Transform data for chart
-            const chartData = data.values?.map(item => ({
-                time: new Date(item.datetime).toLocaleString(),
-                price: parseFloat(item.close),
-                volume: parseInt(item.volume),
-                high: parseFloat(item.high),
-                low: parseFloat(item.low),
-                open: parseFloat(item.open)
-            })) || [];
-
-            setStockData(chartData.reverse());
-            setLoading(false);
+            const response = await api.get(`/stocks/${symbol}/data?interval=${selectedInterval}`);
+            setStockData(response.data);
         } catch (error) {
-            console.error('Failed to fetch stock data:', error);
-            setLoading(false);
+            console.error('Error fetching stock data:', error);
         }
     };
 
     const fetchQuote = async () => {
         try {
-            const response = await fetch(
-                `http://localhost:8080/api/stocks/${symbol}/quote`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                }
-            );
-            const data = await response.json();
-            console.log('Quote data:', data);
-            setQuote(data);
+            const response = await api.get(`/stocks/${symbol}/quote`);
+            setQuote(response.data);
         } catch (error) {
-            console.error('Failed to fetch quote:', error);
+            console.error('Error fetching quote:', error);
         }
     };
 
     const fetchHoldings = async () => {
         try {
-            const response = await fetch(
-                `http://localhost:8080/api/holdings/${symbol}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                }
-            );
-            if (!response.ok) {
-                throw new Error('Failed to fetch holdings');
-            }
-            const data = await response.json();
-            console.log('Holdings data:', data);
-            setHoldings(data);
+            const response = await api.get(`/holdings/${symbol}`);
+            setHoldings(response.data);
         } catch (error) {
-            console.error('Failed to fetch holdings:', error);
-            setHoldings({ quantity: 0, averagePrice: 0 });
+            if (error.response?.status !== 404) {
+                console.error('Error fetching holding:', error);
+            }
         }
     };
 
     const fetchFundamentals = async () => {
         try {
-            const response = await fetch(`http://localhost:8080/api/stocks/${symbol}/fundamentals`);
-            if (response.ok) {
-                const data = await response.json();
-                setFundamentals(data);
-            }
+            const response = await api.get(`/stocks/${symbol}/fundamentals`);
+            setFundamentals(response.data);
         } catch (error) {
             console.error('Error fetching fundamentals:', error);
         }
@@ -142,11 +98,8 @@ const StockDetails = () => {
 
     const fetchFinancials = async () => {
         try {
-            const response = await fetch(`http://localhost:8080/api/stocks/${symbol}/financials`);
-            if (response.ok) {
-                const data = await response.json();
-                setFinancials(data);
-            }
+            const response = await api.get(`/stocks/${symbol}/financials`);
+            setFinancials(response.data);
         } catch (error) {
             console.error('Error fetching financials:', error);
         }
@@ -154,63 +107,37 @@ const StockDetails = () => {
 
     const handleBuy = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/transactions/buy', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    symbol,
-                    quantity: parseFloat(quantity),
-                    price: quote.close
-                })
+            const response = await api.post('/transactions/buy', {
+                symbol,
+                quantity: parseFloat(quantity),
+                price: quote.close
             });
-
-            if (!response.ok) {
-                const errorData = await response.text();
-                throw new Error(errorData);
-            }
-
-            const data = await response.json();
-            updateAuth({ ...user, balance: data.user.balance }, localStorage.getItem('token'));
+            updateAuth({ ...user, balance: response.data.user.balance }, localStorage.getItem('token'));
             setSuccess('Successfully bought stocks!');
             fetchHoldings();
             setOpenBuyDialog(false);
             setQuantity('');
         } catch (error) {
-            setError(error.message);
+            console.error('Error buying stock:', error);
+            setError(error.response?.data?.message || 'Failed to buy stock');
         }
     };
 
     const handleSell = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/transactions/sell', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    symbol,
-                    quantity: parseFloat(quantity),
-                    price: quote.close
-                })
+            const response = await api.post('/transactions/sell', {
+                symbol,
+                quantity: parseFloat(quantity),
+                price: quote.close
             });
-
-            if (!response.ok) {
-                const errorData = await response.text();
-                throw new Error(errorData);
-            }
-
-            const data = await response.json();
-            updateAuth({ ...user, balance: data.user.balance }, localStorage.getItem('token'));
+            updateAuth({ ...user, balance: response.data.user.balance }, localStorage.getItem('token'));
             setSuccess('Successfully sold stocks!');
             fetchHoldings();
             setOpenSellDialog(false);
             setQuantity('');
         } catch (error) {
-            setError(error.message);
+            console.error('Error selling stock:', error);
+            setError(error.response?.data?.message || 'Failed to sell stock');
         }
     };
 

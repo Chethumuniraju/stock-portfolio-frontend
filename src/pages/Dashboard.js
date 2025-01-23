@@ -7,7 +7,7 @@ import {
     ButtonGroup, Chip
 } from '@mui/material';
 import { Add, Delete, Search, ChevronRight, Add as AddIcon } from '@mui/icons-material';
-import { searchStocks } from '../services/api';
+import api from '../services/api';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../contexts/AuthContext';
 import HoldingsList from '../components/HoldingsList';
@@ -34,27 +34,76 @@ const Dashboard = () => {
 
     const fetchWatchlists = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/watchlists', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            const data = await response.json();
-            console.log('Watchlists:', data);
-            setWatchlists(data);
+            const response = await api.get('/watchlists');
+            setWatchlists(response.data);
         } catch (error) {
-            console.error('Failed to fetch watchlists:', error);
+            console.error('Error fetching watchlists:', error);
+        }
+    };
+
+    const fetchQuote = async (symbol) => {
+        try {
+            const response = await api.get(`/stocks/${symbol}/quote`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error fetching quote for ${symbol}:`, error);
+            return null;
+        }
+    };
+
+    const createWatchlist = async (name) => {
+        try {
+            const response = await api.post('/watchlists', { name });
+            await fetchWatchlists();
+        } catch (error) {
+            console.error('Error creating watchlist:', error);
+        }
+    };
+
+    const searchStocks = async (query) => {
+        try {
+            const response = await api.get(`/stocks/search?symbol=${query}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error searching stocks:', error);
+            return [];
+        }
+    };
+
+    const addStockToWatchlist = async (watchlistId, symbol) => {
+        try {
+            await api.post(`/watchlists/${watchlistId}/stocks/${symbol}`);
+            await fetchWatchlists();
+        } catch (error) {
+            console.error('Error adding stock to watchlist:', error);
+        }
+    };
+
+    const removeStockFromWatchlist = async (watchlistId, symbol) => {
+        try {
+            await api.delete(`/watchlists/${watchlistId}/stocks/${symbol}`);
+            await fetchWatchlists();
+        } catch (error) {
+            console.error('Error removing stock from watchlist:', error);
+        }
+    };
+
+    const deleteWatchlist = async (watchlistId) => {
+        try {
+            await api.delete(`/watchlists/${watchlistId}`);
+            await fetchWatchlists();
+        } catch (error) {
+            console.error('Error deleting watchlist:', error);
         }
     };
 
     const fetchStockDetails = async (symbol) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/stocks/${symbol}/quote`);
-            if (response.ok) {
-                const data = await response.json();
+            const response = await fetchQuote(symbol);
+            if (response) {
                 setWatchlistStockDetails(prev => ({
                     ...prev,
-                    [symbol]: data
+                    [symbol]: response
                 }));
             }
         } catch (error) {
@@ -82,20 +131,7 @@ const Dashboard = () => {
 
     const handleCreateWatchlist = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/watchlists', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    name: newWatchlistName,
-                    stockSymbols: []
-                })
-            });
-            const data = await response.json();
-            console.log('Created watchlist:', data);
-            setWatchlists(current => [...current, data]);
+            await createWatchlist(newWatchlistName);
             setOpenDialog(false);
             setNewWatchlistName('');
         } catch (error) {
@@ -105,17 +141,12 @@ const Dashboard = () => {
 
     const handleSearch = async (query) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/stocks/search?symbol=${query}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            const data = await response.json();
-            console.log('Search response:', data);
+            const response = await searchStocks(query);
+            console.log('Search response:', response);
             
-            if (data && data.data) {
+            if (response && response.data) {
                 // Filter for US stocks and format the results
-                const usStocks = data.data.filter(stock => 
+                const usStocks = response.data.filter(stock => 
                     stock.country === 'United States' || 
                     stock.exchange.includes('NYSE') || 
                     stock.exchange.includes('NASDAQ')
@@ -151,15 +182,9 @@ const Dashboard = () => {
 
     const handleAddToWatchlist = async (watchlistId, symbol) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/watchlists/${watchlistId}/stocks/${symbol}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            const data = await response.json();
-            console.log('Added to watchlist:', data);
-            fetchWatchlists(); // Refresh watchlists
+            await addStockToWatchlist(watchlistId, symbol);
+            setSearchQuery('');
+            setSearchResults([]);
         } catch (error) {
             console.error('Failed to add to watchlist:', error);
         }
@@ -167,15 +192,7 @@ const Dashboard = () => {
 
     const handleRemoveFromWatchlist = async (watchlistId, symbol) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/watchlists/${watchlistId}/stocks/${symbol}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            const data = await response.json();
-            console.log('Removed from watchlist:', data);
-            fetchWatchlists(); // Refresh watchlists
+            await removeStockFromWatchlist(watchlistId, symbol);
         } catch (error) {
             console.error('Failed to remove from watchlist:', error);
         }
@@ -183,23 +200,7 @@ const Dashboard = () => {
 
     const handleDeleteWatchlist = async (watchlistId) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/watchlists/${watchlistId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            
-            if (response.ok) {
-                setWatchlists(current => current.filter(w => w.id !== watchlistId));
-                if (selectedWatchlist?.id === watchlistId) {
-                    setSelectedWatchlist(null);
-                }
-            } else if (response.status === 403) {
-                alert('You do not have permission to delete this watchlist. Please try logging out and back in.');
-            } else {
-                alert('Failed to delete watchlist. Please try again later.');
-            }
+            await deleteWatchlist(watchlistId);
         } catch (error) {
             console.error('Failed to delete watchlist:', error);
             alert('Network error while deleting watchlist. Please check your connection and try again.');

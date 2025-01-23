@@ -7,10 +7,9 @@ import {
     Paper,
     Container,
     Alert,
-    Link,
     Divider
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { login as loginApi } from '../services/api';
 
@@ -61,6 +60,7 @@ const Login = () => {
                             id="email"
                             label="Email Address"
                             name="email"
+                            type="email"
                             autoComplete="email"
                             autoFocus
                             value={email}
@@ -96,20 +96,18 @@ const Login = () => {
                         <Box textAlign="center">
                             <Typography variant="body2" color="textSecondary">
                                 Don't have an account?{' '}
-                                <Link 
-                                    component="button"
-                                    variant="body2" 
-                                    onClick={() => navigate('/register')}
-                                    sx={{ 
-                                        cursor: 'pointer',
+                                <RouterLink 
+                                    to="/register"
+                                    style={{ 
                                         textDecoration: 'none',
+                                        color: 'primary.main',
                                         '&:hover': {
                                             textDecoration: 'underline'
                                         }
                                     }}
                                 >
                                     Sign Up
-                                </Link>
+                                </RouterLink>
                             </Typography>
                         </Box>
                     </Box>

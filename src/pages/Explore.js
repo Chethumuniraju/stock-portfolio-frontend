@@ -15,6 +15,7 @@ import {
     Container
 } from '@mui/material';
 import Navbar from '../components/Navbar';
+import api from '../services/api';
 
 const Explore = () => {
     const [news, setNews] = useState(null);
@@ -24,13 +25,8 @@ const Explore = () => {
     useEffect(() => {
         const fetchTopMovers = async () => {
             try {
-                console.log('Fetching top movers...');
-                const response = await fetch('http://localhost:8080/api/stocks/top-movers');
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('Top movers data:', data);
-                    setTopMovers(data);
-                }
+                const response = await api.get('/stocks/top-movers');
+                setTopMovers(response.data);
             } catch (error) {
                 console.error('Error fetching top movers:', error);
             }
@@ -38,43 +34,10 @@ const Explore = () => {
 
         const fetchNews = async () => {
             try {
-                console.log('Fetching news data...');
-                const response = await fetch('http://localhost:8080/api/stocks/news');
-                console.log('Response status:', response.status);
-                
-                if (response.status === 429) {
-                    const errorText = await response.text();
-                    console.warn('API rate limit reached:', errorText);
-                    setNews([]);
-                    return;
-                }
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Error response:', errorText);
-                    throw new Error(`Failed to fetch news: ${response.status} ${errorText}`);
-                }
-
-                const data = await response.json();
-                console.log('Received news data:', data);
-                
-                // Check for the correct structure based on Alpha Vantage API
-                if (data && data.feed) {
-                    const newsItems = data.feed.slice(0, 10).map(item => ({
-                        title: item.title,
-                        url: item.url,
-                        time_published: item.time_published,
-                        summary: item.summary,
-                        source: item.source
-                    }));
-                    setNews(newsItems);
-                } else {
-                    console.warn('No news feed found in response:', data);
-                    setNews([]);
-                }
+                const response = await api.get('/stocks/news');
+                setNews(response.data);
             } catch (error) {
                 console.error('Error fetching news:', error);
-                setNews([]);
             }
         };
 
