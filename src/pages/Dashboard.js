@@ -361,86 +361,47 @@ const Dashboard = () => {
                     <HoldingsList />
                 ) : (
                     <Grid container spacing={3}>
-                        {watchlists.map((watchlist) => (
-                            <Grid item xs={12} sm={6} md={4} key={watchlist.id}>
-                                <Card>
-                                    <CardContent>
-                                        <Box display="flex" justifyContent="space-between" alignItems="center">
-                                            <Button
-                                                onClick={() => navigate(`/watchlist/${watchlist.id}`)}
+                        {/* Watchlists List */}
+                        <Grid item xs={12}>
+                            <Paper sx={{ p: 2 }}>
+                                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                                    <Typography variant="h6">My Watchlists</Typography>
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<AddIcon />}
+                                        onClick={() => setOpenDialog(true)}
+                                    >
+                                        Create New Watchlist
+                                    </Button>
+                                </Box>
+                                <Grid container spacing={2}>
+                                    {watchlists.map((watchlist) => (
+                                        <Grid item xs={12} sm={6} md={4} key={watchlist.id}>
+                                            <Card 
                                                 sx={{ 
-                                                    textAlign: 'left',
-                                                    textTransform: 'none',
-                                                    p: 0
+                                                    cursor: 'pointer',
+                                                    transition: 'transform 0.2s',
+                                                    '&:hover': { 
+                                                        transform: 'translateY(-4px)',
+                                                        boxShadow: 3
+                                                    }
                                                 }}
+                                                onClick={() => navigate(`/watchlist/${watchlist.id}`)}
                                             >
-                                                <Typography variant="h6">
-                                                    {watchlist.name}
-                                                </Typography>
-                                            </Button>
-                                            <IconButton 
-                                                onClick={() => handleDeleteWatchlist(watchlist.id)}
-                                                size="small"
-                                            >
-                                                <Delete />
-                                            </IconButton>
-                                        </Box>
-                                        <List>
-                                            {watchlist.stockSymbols.map((symbol) => (
-                                                <ListItem 
-                                                    key={symbol}
-                                                    button
-                                                    onClick={() => handleStockClick(symbol)}
-                                                >
-                                                    <ListItemText 
-                                                        primary={symbol}
-                                                        secondary={
-                                                            watchlistStockDetails[symbol] ? (
-                                                                <>
-                                                                    {formatCurrency(watchlistStockDetails[symbol].close)}
-                                                                    <span style={{ 
-                                                                        color: watchlistStockDetails[symbol].percent_change >= 0 
-                                                                            ? 'green' 
-                                                                            : 'red',
-                                                                        marginLeft: '8px'
-                                                                    }}>
-                                                                        {formatPercentage(watchlistStockDetails[symbol].percent_change)}
-                                                                    </span>
-                                                                </>
-                                                            ) : 'Loading...'
-                                                        }
-                                                    />
-                                                    <ListItemSecondaryAction>
-                                                        <IconButton 
-                                                            edge="end" 
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleRemoveFromWatchlist(watchlist.id, symbol);
-                                                            }}
-                                                        >
-                                                            <Delete />
-                                                        </IconButton>
-                                                    </ListItemSecondaryAction>
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                        <Box mt={2}>
-                                            <Button
-                                                fullWidth
-                                                variant="outlined"
-                                                startIcon={<Add />}
-                                                onClick={() => {
-                                                    setSelectedWatchlist(watchlist);
-                                                    setWatchlistDialogOpen(true);
-                                                }}
-                                            >
-                                                Add Stock
-                                            </Button>
-                                        </Box>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                        ))}
+                                                <CardContent>
+                                                    <Typography variant="h6" gutterBottom>
+                                                        {watchlist.name}
+                                                    </Typography>
+                                                    <Typography color="textSecondary">
+                                                        {watchlist.stockSymbols?.length || 0} stocks
+                                                    </Typography>
+                                                </CardContent>
+                                            </Card>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            </Paper>
+                        </Grid>
                     </Grid>
                 )}
 
@@ -465,54 +426,6 @@ const Dashboard = () => {
                             disabled={!newWatchlistName.trim()}
                         >
                             Create
-                        </Button>
-                    </DialogActions>
-                </Dialog>
-
-                {/* Add Stock to Watchlist Dialog */}
-                <Dialog 
-                    open={watchlistDialogOpen} 
-                    onClose={() => {
-                        setWatchlistDialogOpen(false);
-                        setSearchQuery('');
-                        setSearchResults([]);
-                    }}
-                >
-                    <DialogTitle>Add Stock to Watchlist</DialogTitle>
-                    <DialogContent>
-                        <TextField
-                            autoFocus
-                            margin="dense"
-                            label="Search Stocks"
-                            fullWidth
-                            value={searchQuery}
-                            onChange={handleSearchChange}
-                        />
-                        <List>
-                            {searchResults.map((stock) => (
-                                <ListItem 
-                                    key={stock.symbol}
-                                    button
-                                    onClick={() => {
-                                        handleAddToWatchlist(selectedWatchlist.id, stock.symbol);
-                                        setWatchlistDialogOpen(false);
-                                    }}
-                                >
-                                    <ListItemText 
-                                        primary={stock.symbol}
-                                        secondary={stock.name}
-                                    />
-                                </ListItem>
-                            ))}
-                        </List>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => {
-                            setWatchlistDialogOpen(false);
-                            setSearchQuery('');
-                            setSearchResults([]);
-                        }}>
-                            Cancel
                         </Button>
                     </DialogActions>
                 </Dialog>
