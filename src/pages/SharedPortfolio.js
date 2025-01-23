@@ -44,6 +44,7 @@ const SharedPortfolio = () => {
             setUserInfo(response.data);
         } catch (error) {
             console.error('Error fetching user info:', error);
+            setError('Failed to load portfolio information.');
         }
     };
 
@@ -132,7 +133,7 @@ const SharedPortfolio = () => {
             {/* Header */}
             <Box sx={{ mb: 4 }}>
                 <Typography variant="h4" gutterBottom>
-                    {userInfo?.name || 'User'}'s Portfolio
+                    {userInfo?.name}'s Portfolio
                 </Typography>
                 <Typography variant="subtitle1" color="text.secondary">
                     Shared portfolio • Valid until {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}
