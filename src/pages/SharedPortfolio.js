@@ -2,18 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
     Box,
-    Card,
-    CardContent,
+    Container,
     Typography,
     Grid,
+    Paper,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
     TableRow,
-    Paper,
-    CircularProgress
+    CircularProgress,
+    Card,
+    CardContent
 } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -28,25 +29,33 @@ const SharedPortfolio = () => {
     const [portfolioSummary, setPortfolioSummary] = useState({
         totalInvestment: 0,
         currentValue: 0,
-        totalProfitLoss: 0,
-        todayProfitLoss: 0
+        totalProfitLoss: 0
     });
+    const [userInfo, setUserInfo] = useState(null);
 
     useEffect(() => {
         fetchSharedPortfolio();
+        fetchUserInfo();
     }, [userId]);
+
+    const fetchUserInfo = async () => {
+        try {
+            const response = await api.get(`/users/${userId}`);
+            setUserInfo(response.data);
+        } catch (error) {
+            console.error('Error fetching user info:', error);
+        }
+    };
 
     const fetchSharedPortfolio = async () => {
         try {
             setLoading(true);
             setError(null);
             
-            // Fetch holdings for the shared portfolio
             const holdingsResponse = await api.get(`/holdings/shared/${userId}`);
             const fetchedHoldings = holdingsResponse.data;
             setHoldings(fetchedHoldings);
 
-            // Fetch current stock quotes for each holding
             const quotes = {};
             await Promise.all(
                 fetchedHoldings.map(async (holding) => {
@@ -75,21 +84,18 @@ const SharedPortfolio = () => {
                     const currentValue = holding.quantity * quote.close;
                     const investment = holding.quantity * holding.averagePrice;
                     const profitLoss = currentValue - investment;
-                    const todayChange = holding.quantity * (quote.close - quote.previousClose);
 
                     return {
                         totalInvestment: acc.totalInvestment + investment,
                         currentValue: acc.currentValue + currentValue,
-                        totalProfitLoss: acc.totalProfitLoss + profitLoss,
-                        todayProfitLoss: acc.todayProfitLoss + todayChange
+                        totalProfitLoss: acc.totalProfitLoss + profitLoss
                     };
                 }
                 return acc;
             }, {
                 totalInvestment: 0,
                 currentValue: 0,
-                totalProfitLoss: 0,
-                todayProfitLoss: 0
+                totalProfitLoss: 0
             });
 
             setPortfolioSummary(summary);
@@ -99,12 +105,10 @@ const SharedPortfolio = () => {
     const formatCurrency = (value) => {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
-            currency: 'USD'
+            currency: 'USD',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         }).format(value);
-    };
-
-    const formatPercentage = (value) => {
-        return `${(value * 100).toFixed(2)}%`;
     };
 
     if (loading) {
@@ -124,29 +128,23 @@ const SharedPortfolio = () => {
     }
 
     return (
-        <Box sx={{ p: 3 }}>
-            <Typography variant="h4" gutterBottom>
-                Portfolio Overview
-            </Typography>
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+            {/* Header */}
+            <Box sx={{ mb: 4 }}>
+                <Typography variant="h4" gutterBottom>
+                    {userInfo?.name || 'User'}'s Portfolio
+                </Typography>
+                <Typography variant="subtitle1" color="text.secondary">
+                    Shared portfolio • Valid until {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                </Typography>
+            </Box>
 
-            {/* Portfolio Summary Cards */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6} md={3}>
+            {/* Summary Cards */}
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid item xs={12} md={4}>
                     <Card>
                         <CardContent>
-                            <Typography color="textSecondary" gutterBottom>
-                                Total Investment
-                            </Typography>
-                            <Typography variant="h5">
-                                {formatCurrency(portfolioSummary.totalInvestment)}
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Typography color="textSecondary" gutterBottom>
+                            <Typography variant="subtitle1" color="text.secondary">
                                 Current Value
                             </Typography>
                             <Typography variant="h5">
@@ -155,35 +153,29 @@ const SharedPortfolio = () => {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid item xs={12} md={4}>
                     <Card>
                         <CardContent>
-                            <Typography color="textSecondary" gutterBottom>
-                                Total Profit/Loss
+                            <Typography variant="subtitle1" color="text.secondary">
+                                Total Investment
                             </Typography>
-                            <Box display="flex" alignItems="center">
+                            <Typography variant="h5">
+                                {formatCurrency(portfolioSummary.totalInvestment)}
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                    <Card>
+                        <CardContent>
+                            <Typography variant="subtitle1" color="text.secondary">
+                                Total P&L
+                            </Typography>
+                            <Box display="flex" alignItems="center" gap={1}>
                                 <Typography variant="h5" color={portfolioSummary.totalProfitLoss >= 0 ? 'success.main' : 'error.main'}>
                                     {formatCurrency(portfolioSummary.totalProfitLoss)}
                                 </Typography>
                                 {portfolioSummary.totalProfitLoss >= 0 ? 
-                                    <TrendingUpIcon color="success" /> : 
-                                    <TrendingDownIcon color="error" />
-                                }
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                        <CardContent>
-                            <Typography color="textSecondary" gutterBottom>
-                                Today's Profit/Loss
-                            </Typography>
-                            <Box display="flex" alignItems="center">
-                                <Typography variant="h5" color={portfolioSummary.todayProfitLoss >= 0 ? 'success.main' : 'error.main'}>
-                                    {formatCurrency(portfolioSummary.todayProfitLoss)}
-                                </Typography>
-                                {portfolioSummary.todayProfitLoss >= 0 ? 
                                     <TrendingUpIcon color="success" /> : 
                                     <TrendingDownIcon color="error" />
                                 }
@@ -198,49 +190,32 @@ const SharedPortfolio = () => {
                 <Table>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Symbol</TableCell>
-                            <TableCell>Quantity</TableCell>
-                            <TableCell>Average Price</TableCell>
-                            <TableCell>Current Price</TableCell>
-                            <TableCell>Total Value</TableCell>
-                            <TableCell>Profit/Loss</TableCell>
-                            <TableCell>Change (%)</TableCell>
+                            <TableCell>Stock</TableCell>
+                            <TableCell align="right">Quantity</TableCell>
+                            <TableCell align="right">Avg. Price</TableCell>
+                            <TableCell align="right">Current Price</TableCell>
+                            <TableCell align="right">Current Value</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {holdings.map((holding) => {
                             const quote = stockDetails[holding.stockSymbol] || {};
                             const currentValue = holding.quantity * quote.close;
-                            const investment = holding.quantity * holding.averagePrice;
-                            const profitLoss = currentValue - investment;
-                            const profitLossPercent = investment !== 0 ? profitLoss / investment : 0;
 
                             return (
-                                <TableRow key={holding.id}>
+                                <TableRow key={holding.stockSymbol}>
                                     <TableCell>{holding.stockSymbol}</TableCell>
-                                    <TableCell>{holding.quantity}</TableCell>
-                                    <TableCell>{formatCurrency(holding.averagePrice)}</TableCell>
-                                    <TableCell>{formatCurrency(quote.close || 0)}</TableCell>
-                                    <TableCell>{formatCurrency(currentValue)}</TableCell>
-                                    <TableCell>
-                                        <Box display="flex" alignItems="center">
-                                            <Typography color={profitLoss >= 0 ? 'success.main' : 'error.main'}>
-                                                {formatCurrency(profitLoss)}
-                                            </Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography color={profitLossPercent >= 0 ? 'success.main' : 'error.main'}>
-                                            {formatPercentage(profitLossPercent)}
-                                        </Typography>
-                                    </TableCell>
+                                    <TableCell align="right">{holding.quantity.toFixed(2)}</TableCell>
+                                    <TableCell align="right">{formatCurrency(holding.averagePrice)}</TableCell>
+                                    <TableCell align="right">{formatCurrency(quote.close || 0)}</TableCell>
+                                    <TableCell align="right">{formatCurrency(currentValue)}</TableCell>
                                 </TableRow>
                             );
                         })}
                     </TableBody>
                 </Table>
             </TableContainer>
-        </Box>
+        </Container>
     );
 };
 
