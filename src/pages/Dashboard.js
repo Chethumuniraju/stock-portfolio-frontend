@@ -287,6 +287,76 @@ const Dashboard = () => {
             </Box>
 
             <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+                {/* Search Section - Always visible */}
+                <Grid container spacing={3}>
+                    <Grid item xs={12}>
+                        <Paper sx={{ p: 3, mb: 2 }}>
+                            <Typography variant="h6" gutterBottom>
+                                Search Stocks
+                            </Typography>
+                            <TextField
+                                fullWidth
+                                variant="outlined"
+                                placeholder="Search by stock symbol..."
+                                value={searchQuery}
+                                onChange={handleSearchChange}
+                                sx={{ mb: 2 }}
+                            />
+                            {searchResults.length > 0 && (
+                                <List>
+                                    {searchResults.map((stock) => (
+                                        <ListItem
+                                            key={stock.symbol}
+                                            button
+                                            onClick={() => handleStockClick(stock.symbol)}
+                                            sx={{
+                                                '&:hover': { bgcolor: 'action.hover' },
+                                                borderRadius: 1,
+                                                mb: 1
+                                            }}
+                                        >
+                                            <ListItemText
+                                                primary={
+                                                    <Box display="flex" alignItems="center">
+                                                        <Typography variant="body1" fontWeight="medium">
+                                                            {stock.symbol}
+                                                        </Typography>
+                                                        <Typography 
+                                                            variant="body2" 
+                                                            color="textSecondary"
+                                                            sx={{ ml: 2 }}
+                                                        >
+                                                            {stock.name || stock.instrument_name}
+                                                        </Typography>
+                                                    </Box>
+                                                }
+                                                secondary={`Exchange: ${stock.exchange}`}
+                                            />
+                                            {activeSection === 'watchlists' && selectedWatchlist && (
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    startIcon={<Add />}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleAddToWatchlist(selectedWatchlist.id, stock.symbol);
+                                                        setSearchQuery('');
+                                                        setSearchResults([]);
+                                                    }}
+                                                    sx={{ mr: 1 }}
+                                                >
+                                                    Add to Watchlist
+                                                </Button>
+                                            )}
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            )}
+                        </Paper>
+                    </Grid>
+                </Grid>
+
+                {/* Content Section */}
                 {activeSection === 'holdings' ? (
                     <HoldingsList />
                 ) : (
