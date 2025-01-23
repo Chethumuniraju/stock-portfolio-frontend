@@ -61,7 +61,16 @@ const StockDetails = () => {
     const fetchStockData = async () => {
         try {
             const response = await api.get(`/stocks/${symbol}/data?interval=${selectedInterval}`);
-            setStockData(response.data);
+            // Transform data for chart
+            const chartData = response.data?.values?.map(item => ({
+                time: new Date(item.datetime).toLocaleString(),
+                price: parseFloat(item.close),
+                volume: parseInt(item.volume),
+                high: parseFloat(item.high),
+                low: parseFloat(item.low),
+                open: parseFloat(item.open)
+            })) || [];
+            setStockData(chartData.reverse());
         } catch (error) {
             console.error('Error fetching stock data:', error);
         }
@@ -235,6 +244,61 @@ const StockDetails = () => {
         );
     };
 
+    const renderPriceChart = () => {
+        if (!stockData || stockData.length === 0) return null;
+
+        return (
+            <Grid item xs={12}>
+                <Paper sx={{ p: 3 }}>
+                    <Typography variant="h6" gutterBottom>
+                        Price History
+                    </Typography>
+                    <ButtonGroup 
+                        variant="outlined" 
+                        size="small" 
+                        sx={{ mb: 2 }}
+                    >
+                        {INTERVALS.map((interval) => (
+                            <Button
+                                key={interval}
+                                onClick={() => setSelectedInterval(interval)}
+                                variant={selectedInterval === interval ? 'contained' : 'outlined'}
+                            >
+                                {interval}
+                            </Button>
+                        ))}
+                    </ButtonGroup>
+                    <Box sx={{ width: '100%', height: 400 }}>
+                        <ResponsiveContainer>
+                            <LineChart data={stockData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis 
+                                    dataKey="time"
+                                    tick={{ fontSize: 12 }}
+                                    angle={-45}
+                                    textAnchor="end"
+                                />
+                                <YAxis 
+                                    domain={['auto', 'auto']}
+                                    tick={{ fontSize: 12 }}
+                                />
+                                <Tooltip />
+                                <Legend />
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="price" 
+                                    stroke="#8884d8" 
+                                    dot={false}
+                                    name="Price"
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </Box>
+                </Paper>
+            </Grid>
+        );
+    };
+
     const renderFinancials = () => {
         if (!financials?.annualReports) return null;
 
@@ -249,40 +313,24 @@ const StockDetails = () => {
             <Grid item xs={12}>
                 <Paper sx={{ p: 3 }}>
                     <Typography variant="h6" gutterBottom>
-                        Financial Performance (in Millions USD)
+                        Financial Performance
                     </Typography>
-                    <Box sx={{ height: 400 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                                data={chartData}
-                                margin={{
-                                    top: 20,
-                                    right: 30,
-                                    left: 20,
-                                    bottom: 5,
-                                }}
-                            >
+                    <Box sx={{ width: '100%', height: 400 }}>
+                        <ResponsiveContainer>
+                            <BarChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="year" />
-                                <YAxis />
-                                <Tooltip 
-                                    formatter={(value) => `$${value.toFixed(2)}M`}
-                                    labelStyle={{ color: 'black' }}
-                                    contentStyle={{ backgroundColor: 'white', border: '1px solid #ccc' }}
+                                <YAxis 
+                                    label={{ 
+                                        value: 'USD (Millions)', 
+                                        angle: -90, 
+                                        position: 'insideLeft' 
+                                    }}
                                 />
+                                <Tooltip />
                                 <Legend />
-                                <Bar 
-                                    dataKey="operatingCashFlow" 
-                                    name="Operating Cash Flow" 
-                                    fill="#8884d8"
-                                    radius={[4, 4, 0, 0]}
-                                />
-                                <Bar 
-                                    dataKey="netIncome" 
-                                    name="Net Income" 
-                                    fill="#82ca9d"
-                                    radius={[4, 4, 0, 0]}
-                                />
+                                <Bar dataKey="operatingCashFlow" fill="#8884d8" name="Operating Cash Flow" />
+                                <Bar dataKey="netIncome" fill="#82ca9d" name="Net Income" />
                             </BarChart>
                         </ResponsiveContainer>
                     </Box>
@@ -293,8 +341,13 @@ const StockDetails = () => {
 
     if (loading) {
         return (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-                <CircularProgress />
+            <Box>
+                <Navbar />
+                <Container maxWidth="lg" sx={{ mt: 4 }}>
+                    <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+                        <CircularProgress />
+                    </Box>
+                </Container>
             </Box>
         );
     }
@@ -302,228 +355,108 @@ const StockDetails = () => {
     return (
         <Box>
             <Navbar />
-            <Container maxWidth="lg" sx={{ mt: 4 }}>
+            <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error}
+                    </Alert>
+                )}
+                {success && (
+                    <Alert severity="success" sx={{ mb: 2 }}>
+                        {success}
+                    </Alert>
+                )}
                 <Grid container spacing={3}>
-                    {/* Stock Info Section */}
+                    {/* Stock Info */}
                     <Grid item xs={12}>
                         <Paper sx={{ p: 3 }}>
-                            <Typography variant="h4" gutterBottom>
-                                {symbol}
-                            </Typography>
-                            {quote && (
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12} md={3}>
-                                        <Card>
-                                            <CardContent>
-                                                <Typography color="textSecondary" gutterBottom>
-                                                    Current Price
-                                                </Typography>
-                                                <Typography variant="h5">
-                                                    ${parseFloat(quote.close).toFixed(2)}
-                                                </Typography>
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <Card>
-                                            <CardContent>
-                                                <Typography color="textSecondary" gutterBottom>
-                                                    Change
-                                                </Typography>
-                                                <Typography 
-                                                    variant="h5"
-                                                    color={quote.percent_change >= 0 ? 'success.main' : 'error.main'}
-                                                >
-                                                    {quote.percent_change >= 0 ? '+' : ''}
-                                                    {parseFloat(quote.percent_change).toFixed(2)}%
-                                                </Typography>
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <Card>
-                                            <CardContent>
-                                                <Typography color="textSecondary" gutterBottom>
-                                                    Volume
-                                                </Typography>
-                                                <Typography variant="h5">
-                                                    {parseInt(quote.volume).toLocaleString()}
-                                                </Typography>
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
-                                    <Grid item xs={12} md={3}>
-                                        <Card>
-                                            <CardContent>
-                                                <Typography color="textSecondary" gutterBottom>
-                                                    Market Cap
-                                                </Typography>
-                                                <Typography variant="h5">
-                                                    ${(parseFloat(quote.close) * parseInt(quote.volume)).toLocaleString()}
-                                                </Typography>
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
+                            <Grid container spacing={2} alignItems="center">
+                                <Grid item>
+                                    <Typography variant="h4">
+                                        {symbol}
+                                    </Typography>
                                 </Grid>
-                            )}
-                        </Paper>
-                    </Grid>
-
-                    {/* Chart Section */}
-                    <Grid item xs={12}>
-                        <Paper sx={{ p: 3 }}>
-                            <ButtonGroup sx={{ mb: 2 }}>
-                                {INTERVALS.map((interval) => (
-                                    <Button
-                                        key={interval}
-                                        variant={selectedInterval === interval ? 'contained' : 'outlined'}
-                                        onClick={() => setSelectedInterval(interval)}
-                                    >
-                                        {interval}
-                                    </Button>
-                                ))}
-                            </ButtonGroup>
-                            <Box sx={{ height: 400 }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart
-                                        data={stockData}
-                                        margin={{
-                                            top: 5,
-                                            right: 30,
-                                            left: 20,
-                                            bottom: 5,
-                                        }}
-                                    >
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis 
-                                            dataKey="time"
-                                            tick={{ fontSize: 12 }}
-                                            angle={-45}
-                                            textAnchor="end"
-                                        />
-                                        <YAxis domain={['auto', 'auto']} />
-                                        <Tooltip />
-                                        <Legend />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="price"
-                                            stroke="#8884d8"
-                                            dot={false}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </Box>
-                        </Paper>
-                    </Grid>
-
-                    {/* Fundamentals Section */}
-                    {renderFundamentals()}
-
-                    {/* Financials Section */}
-                    {renderFinancials()}
-
-                    {/* Trading Section */}
-                    <Grid item xs={12}>
-                        <Paper sx={{ p: 3 }}>
-                            <Typography variant="h6" gutterBottom>
-                                Trading
-                            </Typography>
-                            <Box mb={2}>
-                                <Typography color="textSecondary">
-                                    Current Holdings: {holdings ? holdings.quantity.toFixed(2) : '0.00'} shares
-                                </Typography>
-                                <Typography color="textSecondary">
-                                    Average Price: ${holdings ? holdings.averagePrice.toFixed(2) : '0.00'}
-                                </Typography>
-                            </Box>
-                            <Grid container spacing={2}>
-                                <Grid item xs={12} md={6}>
-                                    <Button
-                                        variant="contained"
-                                        color="success"
-                                        fullWidth
-                                        size="large"
-                                        onClick={() => setOpenBuyDialog(true)}
-                                    >
-                                        Buy
-                                    </Button>
-                                </Grid>
-                                <Grid item xs={12} md={6}>
-                                    <Button
-                                        variant="contained"
-                                        color="error"
-                                        fullWidth
-                                        size="large"
-                                        onClick={() => setOpenSellDialog(true)}
-                                    >
-                                        Sell
-                                    </Button>
-                                </Grid>
+                                {quote && (
+                                    <>
+                                        <Grid item>
+                                            <Typography variant="h5">
+                                                ${quote.close?.toFixed(2)}
+                                            </Typography>
+                                        </Grid>
+                                        <Grid item>
+                                            <Typography 
+                                                variant="h6"
+                                                color={quote.percent_change >= 0 ? 'success.main' : 'error.main'}
+                                            >
+                                                {quote.percent_change >= 0 ? '+' : ''}
+                                                {quote.percent_change?.toFixed(2)}%
+                                            </Typography>
+                                        </Grid>
+                                    </>
+                                )}
                             </Grid>
                         </Paper>
                     </Grid>
+
+                    {/* Price Chart */}
+                    {renderPriceChart()}
+
+                    {/* Fundamentals */}
+                    {renderFundamentals()}
+
+                    {/* Financials */}
+                    {renderFinancials()}
+
+                    {/* Trading Actions */}
+                    {user && (
+                        <Grid item xs={12}>
+                            <Paper sx={{ p: 3 }}>
+                                <Grid container spacing={2} alignItems="center">
+                                    <Grid item xs={12} md={6}>
+                                        <Typography variant="h6" gutterBottom>
+                                            Trading Actions
+                                        </Typography>
+                                        <ButtonGroup>
+                                            <Button
+                                                variant="contained"
+                                                color="primary"
+                                                onClick={() => setOpenBuyDialog(true)}
+                                            >
+                                                Buy
+                                            </Button>
+                                            <Button
+                                                variant="contained"
+                                                color="error"
+                                                onClick={() => setOpenSellDialog(true)}
+                                                disabled={!holdings || holdings.quantity <= 0}
+                                            >
+                                                Sell
+                                            </Button>
+                                        </ButtonGroup>
+                                    </Grid>
+                                    {holdings && (
+                                        <Grid item xs={12} md={6}>
+                                            <Typography variant="subtitle1">
+                                                Your Position:
+                                            </Typography>
+                                            <Typography>
+                                                Quantity: {holdings.quantity}
+                                            </Typography>
+                                            <Typography>
+                                                Average Price: ${holdings.averagePrice?.toFixed(2)}
+                                            </Typography>
+                                        </Grid>
+                                    )}
+                                </Grid>
+                            </Paper>
+                        </Grid>
+                    )}
                 </Grid>
-            </Container>
 
-            {/* Buy Dialog */}
-            <Dialog open={openBuyDialog} onClose={() => setOpenBuyDialog(false)}>
-                <DialogTitle>Buy {symbol}</DialogTitle>
-                <DialogContent>
-                    <Box sx={{ mt: 2 }}>
-                        <Typography gutterBottom>
-                            Current Price: ${quote?.close}
-                        </Typography>
-                        <Typography gutterBottom>
-                            Available Balance: ${user?.balance}
-                        </Typography>
-                        <TextField
-                            autoFocus
-                            margin="dense"
-                            label="Quantity"
-                            type="number"
-                            fullWidth
-                            value={quantity}
-                            onChange={(e) => setQuantity(e.target.value)}
-                            error={!!error}
-                            helperText={error}
-                        />
-                        {quantity && quote && (
-                            <Typography sx={{ mt: 2 }}>
-                                Total Cost: ${(parseFloat(quantity) * quote.close).toFixed(2)}
-                            </Typography>
-                        )}
-                    </Box>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => {
-                        setOpenBuyDialog(false);
-                        setError('');
-                        setQuantity('');
-                    }}>
-                        Cancel
-                    </Button>
-                    <Button 
-                        onClick={handleBuy}
-                        variant="contained"
-                        color="success"
-                        disabled={!quantity || parseFloat(quantity) <= 0}
-                    >
-                        Buy
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Sell Dialog */}
-            <Dialog open={openSellDialog} onClose={() => setOpenSellDialog(false)}>
-                <DialogTitle>Sell {symbol}</DialogTitle>
-                <DialogContent>
-                    <Box sx={{ mt: 2 }}>
-                        <Typography gutterBottom>
-                            Current Price: ${quote?.close || 0}
-                        </Typography>
-                        <Typography gutterBottom color="textSecondary">
-                            Available Shares: {holdings?.quantity || 0}
-                        </Typography>
+                {/* Buy Dialog */}
+                <Dialog open={openBuyDialog} onClose={() => setOpenBuyDialog(false)}>
+                    <DialogTitle>Buy {symbol}</DialogTitle>
+                    <DialogContent>
                         <TextField
                             autoFocus
                             margin="dense"
@@ -532,74 +465,79 @@ const StockDetails = () => {
                             fullWidth
                             value={quantity}
                             onChange={handleQuantityChange}
-                            error={!!error || (holdings && parseFloat(quantity) > holdings.quantity)}
-                            helperText={
-                                error || 
-                                (holdings && parseFloat(quantity) > holdings.quantity 
-                                    ? 'Insufficient shares' 
-                                    : '')
+                            inputProps={{ min: 0, step: 0.01 }}
+                        />
+                        {quote && quantity && (
+                            <Typography variant="body2" sx={{ mt: 2 }}>
+                                Total Cost: ${(quote.close * parseFloat(quantity || 0)).toFixed(2)}
+                            </Typography>
+                        )}
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setOpenBuyDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            onClick={handleBuy}
+                            variant="contained"
+                            disabled={
+                                !quantity || 
+                                parseFloat(quantity) <= 0 || 
+                                !quote || 
+                                !user || 
+                                (quote.close * parseFloat(quantity)) > user.balance
                             }
-                            InputProps={{
-                                inputProps: { 
-                                    min: 0,
-                                    max: holdings?.quantity || 0,
-                                    step: "0.01"
-                                }
+                        >
+                            Buy
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Sell Dialog */}
+                <Dialog open={openSellDialog} onClose={() => setOpenSellDialog(false)}>
+                    <DialogTitle>Sell {symbol}</DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            autoFocus
+                            margin="dense"
+                            label="Quantity"
+                            type="number"
+                            fullWidth
+                            value={quantity}
+                            onChange={handleQuantityChange}
+                            inputProps={{ 
+                                min: 0, 
+                                max: holdings?.quantity || 0,
+                                step: 0.01
                             }}
                         />
-                        {quantity && quote && (
-                            <Box mt={2}>
-                                <Typography color="textSecondary">
-                                    Total Value: ${(parseFloat(quantity || 0) * (quote.close || 0)).toFixed(2)}
-                                </Typography>
-                                <Typography color="textSecondary">
-                                    Brokerage (3%): ${((parseFloat(quantity || 0) * (quote.close || 0)) * 0.03).toFixed(2)}
-                                </Typography>
-                                <Typography variant="subtitle1" sx={{ mt: 1 }}>
-                                    Net Value: ${((parseFloat(quantity || 0) * (quote.close || 0)) * 0.97).toFixed(2)}
-                                </Typography>
-                            </Box>
+                        {quote && quantity && (
+                            <Typography variant="body2" sx={{ mt: 2 }}>
+                                Total Value: ${(quote.close * parseFloat(quantity || 0)).toFixed(2)}
+                            </Typography>
                         )}
-                    </Box>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => {
-                        setOpenSellDialog(false);
-                        setError('');
-                        setQuantity('');
-                    }}>
-                        Cancel
-                    </Button>
-                    <Button 
-                        onClick={handleSell}
-                        variant="contained"
-                        color="error"
-                        disabled={
-                            !quantity || 
-                            parseFloat(quantity) <= 0 || 
-                            !holdings || 
-                            parseFloat(quantity) > holdings.quantity ||
-                            !quote
-                        }
-                    >
-                        Sell
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Success/Error Alert */}
-            {(success || error) && (
-                <Alert 
-                    severity={success ? "success" : "error"}
-                    sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 9999 }}
-                    onClose={() => {
-                        setSuccess('');
-                        setError('');
-                    }}
-                >
-                    {success || error}
-                </Alert>
-            )}
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setOpenSellDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            onClick={handleSell}
+                            variant="contained"
+                            color="error"
+                            disabled={
+                                !quantity || 
+                                parseFloat(quantity) <= 0 || 
+                                !holdings || 
+                                parseFloat(quantity) > holdings.quantity ||
+                                !quote
+                            }
+                        >
+                            Sell
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            </Container>
         </Box>
     );
 };

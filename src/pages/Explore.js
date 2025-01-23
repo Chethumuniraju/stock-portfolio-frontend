@@ -18,7 +18,7 @@ import Navbar from '../components/Navbar';
 import api from '../services/api';
 
 const Explore = () => {
-    const [news, setNews] = useState(null);
+    const [news, setNews] = useState([]);
     const [topMovers, setTopMovers] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -35,9 +35,12 @@ const Explore = () => {
         const fetchNews = async () => {
             try {
                 const response = await api.get('/stocks/news');
-                setNews(response.data);
+                // Check if response.data has the expected structure
+                const newsData = response.data?.feed || [];
+                setNews(newsData);
             } catch (error) {
                 console.error('Error fetching news:', error);
+                setNews([]); // Set empty array on error
             }
         };
 
@@ -149,48 +152,56 @@ const Explore = () => {
                                 Latest Market News
                             </Typography>
                             <Grid container spacing={3}>
-                                {news && news.map((item, index) => (
-                                    <Grid item xs={12} key={index}>
-                                        <Box sx={{ 
-                                            mb: 3,
-                                            p: 2,
-                                            borderRadius: 1,
-                                            bgcolor: 'background.paper',
-                                            boxShadow: 1
-                                        }}>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {item.source}
+                                {news.length > 0 ? (
+                                    news.map((item, index) => (
+                                        <Grid item xs={12} key={index}>
+                                            <Box sx={{ 
+                                                mb: 3,
+                                                p: 2,
+                                                borderRadius: 1,
+                                                bgcolor: 'background.paper',
+                                                boxShadow: 1
+                                            }}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {item.source}
+                                                    </Typography>
+                                                </Box>
+                                                <Typography variant="h6" component="a" 
+                                                    href={item.url} 
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    sx={{ 
+                                                        textDecoration: 'none',
+                                                        color: 'primary.main',
+                                                        display: 'block',
+                                                        mb: 2,
+                                                        '&:hover': {
+                                                            textDecoration: 'underline'
+                                                        }
+                                                    }}
+                                                >
+                                                    {item.title}
                                                 </Typography>
+                                                {item.summary && (
+                                                    <Typography variant="body1" color="text.primary" sx={{ 
+                                                        lineHeight: 1.6,
+                                                        fontSize: '1rem'
+                                                    }}>
+                                                        {item.summary}
+                                                    </Typography>
+                                                )}
+                                                {index < news.length - 1 && <Divider sx={{ mt: 3 }} />}
                                             </Box>
-                                            <Typography variant="h6" component="a" 
-                                                href={item.url} 
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                sx={{ 
-                                                    textDecoration: 'none',
-                                                    color: 'primary.main',
-                                                    display: 'block',
-                                                    mb: 2,
-                                                    '&:hover': {
-                                                        textDecoration: 'underline'
-                                                    }
-                                                }}
-                                            >
-                                                {item.title}
-                                            </Typography>
-                                            {item.summary && (
-                                                <Typography variant="body1" color="text.primary" sx={{ 
-                                                    lineHeight: 1.6,
-                                                    fontSize: '1rem'
-                                                }}>
-                                                    {item.summary}
-                                                </Typography>
-                                            )}
-                                            {index < news.length - 1 && <Divider sx={{ mt: 3 }} />}
-                                        </Box>
+                                        </Grid>
+                                    ))
+                                ) : (
+                                    <Grid item xs={12}>
+                                        <Typography variant="body1" color="text.secondary" align="center">
+                                            No news available at the moment.
+                                        </Typography>
                                     </Grid>
-                                ))}
+                                )}
                             </Grid>
                         </Paper>
                     </Grid>

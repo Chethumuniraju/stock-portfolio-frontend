@@ -25,24 +25,24 @@ const HoldingsList = () => {
         try {
             const response = await api.get('/holdings');
             setHoldings(response.data);
+            
+            // Fetch quotes for all holdings
+            const quotes = {};
+            for (const holding of response.data) {
+                const quoteResponse = await api.get(`/stocks/${holding.stockSymbol}/quote`);
+                quotes[holding.stockSymbol] = quoteResponse.data;
+            }
+            setStockDetails(quotes);
         } catch (error) {
             console.error('Error fetching holdings:', error);
-        }
-    };
-
-    const fetchQuote = async (symbol) => {
-        try {
-            const response = await api.get(`/stocks/${symbol}/quote`);
-            return response.data;
-        } catch (error) {
-            console.error(`Error fetching quote for ${symbol}:`, error);
-            return null;
+        } finally {
+            setLoading(false);
         }
     };
 
     useEffect(() => {
         fetchHoldings();
-        const interval = setInterval(fetchHoldings, 30000);
+        const interval = setInterval(fetchHoldings, 30000); // Refresh every 30 seconds
         return () => clearInterval(interval);
     }, []);
 
@@ -190,6 +190,7 @@ const HoldingsList = () => {
                             const currentValue = quantity * currentPrice;
                             const investmentValue = quantity * averagePrice;
                             const profitLoss = currentValue - investmentValue;
+                            const profitLossPercent = (profitLoss / investmentValue) * 100;
                             const percentChange = parseFloat(stockDetails[holding.stockSymbol]?.percent_change) || 0;
 
                             return (
@@ -219,6 +220,8 @@ const HoldingsList = () => {
                                     <TableCell align="right">
                                         <Typography color={profitLoss >= 0 ? "success.main" : "error.main"}>
                                             {formatCurrency(profitLoss)}
+                                            <br />
+                                            {formatPercentage(profitLossPercent)}
                                         </Typography>
                                     </TableCell>
                                     <TableCell align="right">
