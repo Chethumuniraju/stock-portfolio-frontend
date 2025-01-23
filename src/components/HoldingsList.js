@@ -2,18 +2,24 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
     Card, CardContent, Typography, Box, Grid,
     Table, TableBody, TableCell, TableContainer, 
-    TableHead, TableRow, Paper, CircularProgress
+    TableHead, TableRow, Paper, CircularProgress,
+    Button, Snackbar, IconButton
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import ShareIcon from '@mui/icons-material/Share';
+import CloseIcon from '@mui/icons-material/Close';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
 const HoldingsList = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [holdings, setHoldings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [stockDetails, setStockDetails] = useState({});
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [portfolioSummary, setPortfolioSummary] = useState({
         totalInvestment: 0,
         currentValue: 0,
@@ -30,6 +36,21 @@ const HoldingsList = () => {
             isMounted.current = false;
         };
     }, []);
+
+    const handleShare = () => {
+        if (user) {
+            const shareableLink = `${window.location.origin}/portfolio/shared/${user.id}`;
+            navigator.clipboard.writeText(shareableLink);
+            setSnackbarOpen(true);
+        }
+    };
+
+    const handleCloseSnackbar = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setSnackbarOpen(false);
+    };
 
     const fetchHoldings = async () => {
         const requestId = ++currentRequestId.current;
@@ -161,6 +182,17 @@ const HoldingsList = () => {
 
     return (
         <Box>
+            {/* Share Button */}
+            <Box display="flex" justifyContent="flex-end" mb={2}>
+                <Button
+                    variant="outlined"
+                    startIcon={<ShareIcon />}
+                    onClick={handleShare}
+                >
+                    Share Portfolio
+                </Button>
+            </Box>
+
             {/* Portfolio Summary Cards */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={12} sm={6} md={3}>
@@ -292,6 +324,23 @@ const HoldingsList = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* Snackbar for copy confirmation */}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={3000}
+                onClose={handleCloseSnackbar}
+                message="Portfolio link copied to clipboard"
+                action={
+                    <IconButton
+                        size="small"
+                        color="inherit"
+                        onClick={handleCloseSnackbar}
+                    >
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                }
+            />
         </Box>
     );
 };

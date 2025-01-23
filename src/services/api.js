@@ -52,19 +52,4 @@ export const register = async (userData) => {
   }
 };
 
-export const createShareLink = async () => {
-    const response = await api.post('/portfolio-share/create');
-    return response.data;
-};
-
-export const getSharedPortfolio = async (shareId) => {
-    const response = await api.get(`/portfolio-share/${shareId}`);
-    return response.data;
-};
-
-export const deactivateShareLink = async (shareId) => {
-    const response = await api.delete(`/portfolio-share/${shareId}`);
-    return response.data;
-};
-
 export default api; 

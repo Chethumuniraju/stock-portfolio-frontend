@@ -33,7 +33,6 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/explore" element={<Explore />} />
-            <Route path="/shared/:shareId" element={<SharedPortfolio />} />
             <Route path="/" element={
               <PrivateRoute>
                 <Home />
@@ -64,6 +63,7 @@ function App() {
                 <Profile />
               </PrivateRoute>
             } />
+            <Route path="/portfolio/shared/:userId" element={<SharedPortfolio />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
