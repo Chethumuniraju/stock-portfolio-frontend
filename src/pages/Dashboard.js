@@ -366,9 +366,18 @@ const Dashboard = () => {
                                 <Card>
                                     <CardContent>
                                         <Box display="flex" justifyContent="space-between" alignItems="center">
-                                            <Typography variant="h6" gutterBottom>
-                                                {watchlist.name}
-                                            </Typography>
+                                            <Button
+                                                onClick={() => navigate(`/watchlist/${watchlist.id}`)}
+                                                sx={{ 
+                                                    textAlign: 'left',
+                                                    textTransform: 'none',
+                                                    p: 0
+                                                }}
+                                            >
+                                                <Typography variant="h6">
+                                                    {watchlist.name}
+                                                </Typography>
+                                            </Button>
                                             <IconButton 
                                                 onClick={() => handleDeleteWatchlist(watchlist.id)}
                                                 size="small"
